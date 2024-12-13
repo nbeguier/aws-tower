@@ -4,6 +4,14 @@ CHANGELOG
 AWS-TOWER
 -----
 
+4.6.1
+-----
+
+2024/12/13
+
+### New feature
+  - Allow wildcard in false-positives
+
 4.6.0
 -----
 

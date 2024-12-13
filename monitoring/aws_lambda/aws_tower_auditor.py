@@ -2,7 +2,7 @@
 """
 AWS Tower Auditor
 
-Copyright 2023 Leboncoin
+Copyright 2023-2024 Nicolas BEGUIER
 Licensed under the Apache License, Version 2.0
 Written by Nicolas BEGUIER (nicolas_beguier@hotmail.com)
 """
@@ -28,7 +28,7 @@ from config import variables
 
 # pylint: disable=logging-fstring-interpolation
 
-VERSION = '4.6.0'
+VERSION = '4.6.1'
 
 LOGGER = logging.getLogger('aws-tower')
 

@@ -5,6 +5,9 @@ Asset types VPC class
 Copyright 2020-2023 Leboncoin
 Licensed under the Apache License, Version 2.0
 Written by Nicolas BEGUIER (nicolas.beguier@adevinta.com)
+Copyright 2023-2024 Nicolas BEGUIER
+Licensed under the Apache License, Version 2.0
+Written by Nicolas BEGUIER (nicolas_beguier@hotmail.com)
 """
 
 # Third party library imports

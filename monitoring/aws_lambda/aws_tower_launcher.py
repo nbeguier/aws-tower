@@ -5,6 +5,9 @@ AWS Tower Lambda Launcher
 Copyright 2020-2023 Leboncoin
 Licensed under the Apache License, Version 2.0
 Written by Nicolas BEGUIER (nicolas.beguier@adevinta.com)
+Copyright 2023-2024 Nicolas BEGUIER
+Licensed under the Apache License, Version 2.0
+Written by Nicolas BEGUIER (nicolas_beguier@hotmail.com)
 """
 # Standard library imports
 from configparser import ConfigParser
@@ -20,7 +23,7 @@ sys.path.append('package')
 
 LOGGER = logging.getLogger('aws-tower-launcher')
 
-VERSION = '4.6.0'
+VERSION = '4.6.1'
 
 LOGGER = logging.getLogger('aws-tower')
 

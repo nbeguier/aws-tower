@@ -6,6 +6,9 @@ Copyright 2020-2023 Leboncoin
 Licensed under the Apache License, Version 2.0
 Written by Nicolas BEGUIER (nicolas.beguier@adevinta.com)
 Updated by Fabien MARTINEZ (fabien.martinez@adevinta.com)
+Copyright 2023-2024 Nicolas BEGUIER
+Licensed under the Apache License, Version 2.0
+Written by Nicolas BEGUIER (nicolas_beguier@hotmail.com)
 """
 
 # Standard library imports
@@ -29,7 +32,7 @@ from config import variables
 # from pdb import set_trace as st
 
 CONSOLE = console.Console()
-VERSION = '4.6.0'
+VERSION = '4.6.1'
 
 def audit_handler(session, args, meta_types, cache):
     """
