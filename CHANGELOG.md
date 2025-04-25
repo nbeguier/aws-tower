@@ -4,6 +4,14 @@ CHANGELOG
 AWS-TOWER
 -----
 
+4.6.1b
+-----
+
+2025/04/25
+
+### Updates
+  - Fix rule "An old SSH Key is attached" to only alert of public EC2
+
 4.6.1
 -----
 

@@ -1,5 +1,5 @@
 ---
-version: 4.6.0
+version: 4.6.1b
 types:
   security_group:
     description: Check each rule on each security group and on each source
@@ -1076,6 +1076,16 @@ types:
               - type: attribute
                 name: attribute_value
                 value: operating_system
+          - type: has_attribute_equal
+            description: Check if public is True
+            conditions:
+              - type: constant
+                name: attribute_value
+                value: true
+            data_sources:
+              - type: attribute
+                name: attribute_value
+                value: public
         metadata:
           risks: ['Application vulnerability']
       - message:
