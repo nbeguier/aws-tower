@@ -20,7 +20,7 @@ from requests import Session
 # Debug
 # from pdb import set_trace as st
 
-VERSION = '4.6.1'
+VERSION = '4.7.0'
 
 SESSION = Session()
 
@@ -28,7 +28,6 @@ s3_client = boto3.client('s3')
 BUCKET_NAME = 'aws-tower-findings'
 SECRET_NAME = 'security_slack_alerts'
 REGION_NAME = 'eu-west-3'
-ENV = 'prod'
 SLACK_ENV = {
     'dev': {
         'channel': '#security-alerts-test',
@@ -36,6 +35,10 @@ SLACK_ENV = {
     },
     'prod': {
         'channel': '#security-alerts',
+        'webhook_key': 'security_alerts_slack_webhook'
+    },
+    'monitoring': {
+        'channel': '#security-monitoring',  
         'webhook_key': 'security_alerts_slack_webhook'
     }
 }
@@ -187,6 +190,10 @@ def main(event):
         print('Event is already in s3. Ignoring event.')
         update_event(event)
     else:
+        if 'env' in event:
+            ENV = event['env']
+        else:
+            ENV = 'prod'
         webhook_url = json.loads(get_secret())[SLACK_ENV[ENV]['webhook_key']]
         severity_logo = {
             'high': ':small_red_triangle:',
@@ -222,7 +229,8 @@ def handler(event, _):
       "title": "public IP",
       "severity": "medium",
       "account_name": "my-irish-account",
-      "region_name": "eu-west-1"
+      "region_name": "eu-west-1",
+      "env": "prod" (optionnal)
     }
     """
     main(event)
