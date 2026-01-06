@@ -1,5 +1,5 @@
 ---
-version: 4.6.1b
+version: 4.6.1c
 types:
   security_group:
     description: Check each rule on each security group and on each source
@@ -1028,66 +1028,6 @@ types:
                 value: aws_service
         metadata:
           risks: ['WAN reachable asset', 'Sensitive asset']
-      - message:
-          text: '[{service_name}] An old SSH Key is attached'
-          args:
-            service_name:
-              type: attribute
-              key: name
-        severity: medium
-        rules:
-          - type: has_attribute_equal
-            description: Check if the asset is an EC2
-            conditions:
-              - type: constant
-                name: attribute_value
-                value: EC2
-            data_sources:
-              - type: attribute
-                name: attribute_value
-                value: aws_service
-          - type: has_attribute_equal
-            description: Check if old_attached_ssh_key is in the asset
-            conditions:
-              - type: constant
-                name: attribute_value
-                value: true
-            data_sources:
-              - type: attribute
-                name: attribute_value
-                value: old_attached_ssh_key
-          - type: has_attribute_not_equal
-            description: Check if the OS is not Windows
-            conditions:
-              - type: constant
-                name: attribute_value
-                value: 'Windows'
-            data_sources:
-              - type: attribute
-                name: attribute_value
-                value: operating_system
-          - type: has_attribute_not_equal
-            description: Check if the OS is not Windows with SQL Server Standard
-            conditions:
-              - type: constant
-                name: attribute_value
-                value: 'Windows with SQL Server Standard'
-            data_sources:
-              - type: attribute
-                name: attribute_value
-                value: operating_system
-          - type: has_attribute_equal
-            description: Check if public is True
-            conditions:
-              - type: constant
-                name: attribute_value
-                value: true
-            data_sources:
-              - type: attribute
-                name: attribute_value
-                value: public
-        metadata:
-          risks: ['Application vulnerability']
       - message:
           text: '[{service_name}] EC2 with an Admin role'
           args:
