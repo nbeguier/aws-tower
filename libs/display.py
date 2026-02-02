@@ -6,6 +6,9 @@ Copyright 2020-2023 Leboncoin
 Licensed under the Apache License, Version 2.0
 Written by Nicolas BEGUIER (nicolas.beguier@adevinta.com)
 Updated by Fabien MARTINEZ (fabien.martinez@adevinta.com)
+Copyright 2023-2024 Nicolas BEGUIER
+Licensed under the Apache License, Version 2.0
+Written by Nicolas BEGUIER (nicolas_beguier@hotmail.com)
 """
 
 # Standard library imports
@@ -49,7 +52,7 @@ def prepare_report(assets, meta_types, console):
     return report
 
 @log_me('Auditing the scan...')
-def audit_scan(assets, report, security_config, brief, console):
+def audit_scan(assets, report, security_config, brief, with_fpkey, console):
     """
     Add assets in report and audit them
     """
@@ -70,17 +73,20 @@ def audit_scan(assets, report, security_config, brief, console):
             if not asset.security_issues:
                 continue
             asset.remove_not_vulnerable_members()
-        report = asset.report(report, brief=brief)
+            asset.remove_false_positives()
+        if security_config and not asset.security_issues:
+            continue
+        report = asset.report(report, brief=brief, with_fpkey=with_fpkey)
     return report
 
-def print_report(assets, meta_types, console, output_file, brief=False, security_config=None):
+def print_report(assets, meta_types, console, output_file, brief=False, with_fpkey=False, security_config=None):
     """
     Print subnets
     """
     # Construct Region/VPC/subnet
     report = prepare_report(assets, meta_types, console)
 
-    report = audit_scan(assets, report, security_config, brief, console)
+    report = audit_scan(assets, report, security_config, brief, with_fpkey, console)
 
     str_report = json.dumps(report, sort_keys=True, indent=4)
 
@@ -151,7 +157,18 @@ def draw_vpc_peering(assets, dot_filename, args):
 def draw_threats(title, assets, csl, args):
     # Diagrams imports
     from diagrams import Diagram, Cluster
-    from diagrams.aws.compute import EC2, EKS, LambdaFunction as Lambda
+    from diagrams.aws.compute import EC2, EKS, LambdaFunction as Lambda, Lightsail as LIGHTSAIL
+
+    # ECS node (fallback safe)
+    try:
+        from diagrams.aws.compute import ECS  # type: ignore
+    except Exception:
+        # Some diagrams versions don't have ECS; Fargate is a decent visual fallback
+        try:
+            from diagrams.aws.compute import Fargate as ECS  # type: ignore
+        except Exception:
+            ECS = EC2  # last-resort fallback (won't break draw)
+
     from diagrams.aws.network import ELB, CloudFront, APIGateway as APIGW, VPC
     from diagrams.aws.database import RDS
     from diagrams.aws.storage import S3
@@ -172,7 +189,6 @@ def draw_threats(title, assets, csl, args):
 
     def get_asset_color(asset):
         color = '🟢'
-        # Ignore low
         if asset.security_issues:
             color = '🟢'
         for finding in asset.security_issues:
@@ -186,18 +202,18 @@ def draw_threats(title, assets, csl, args):
     def tagged_name(asset):
         asset_name = f"\n{asset.name.split('.')[0]}"
         if 'WAN reachable asset' in get_asset_risks(asset):
-            asset_name = '🌐 '+asset_name
+            asset_name = '🌐 ' + asset_name
         if 'Application vulnerability' in get_asset_risks(asset):
-            if asset.get_type() != 'CloudFront': # CF are meant to be public
-                asset_name = '🤢 '+asset_name
+            if asset.get_type() != 'CloudFront':
+                asset_name = '🤢 ' + asset_name
         if 'Powerful asset' in get_asset_risks(asset):
-            asset_name = '💪 '+asset_name
+            asset_name = '💪 ' + asset_name
         if 'Sensitive asset' in get_asset_risks(asset):
-            asset_name = '👑 '+asset_name
+            asset_name = '👑 ' + asset_name
         if 'Reconnaissance' in get_asset_risks(asset):
-            asset_name = '👀 '+asset_name
+            asset_name = '👀 ' + asset_name
         if 'Compromised asset' in get_asset_risks(asset):
-            asset_name = '💀 '+asset_name
+            asset_name = '💀 ' + asset_name
         if get_asset_color(asset) != '🟢' and 'WAN reachable asset' not in get_asset_risks(asset):
             asset_name = f'{get_asset_color(asset)} {asset_name}'
         if hasattr(asset, 'dns_record') and asset.dns_record:
@@ -205,7 +221,6 @@ def draw_threats(title, assets, csl, args):
         return asset_name
 
     def get_obj(diag_objs, asset):
-        # TODO: check le type
         asset_name = asset
         if not isinstance(asset, str):
             asset_name = tagged_name(asset)
@@ -217,14 +232,14 @@ def draw_threats(title, assets, csl, args):
     def is_present(diag_objs, asset):
         return get_obj(diag_objs, asset)
 
-    # Generate "Vulnerable Assets", the base of the construction
+    # Generate "Vulnerable Assets"
     if args.limit:
         csl.print('Restrict to only interesting assets among vulnerable')
         asset_names = set()
         vuln_assets = set()
         for asset in assets:
-            if ('Application vulnerability' in get_asset_risks(asset) or \
-                'Powerful asset' in get_asset_risks(asset) or \
+            if ('Application vulnerability' in get_asset_risks(asset) or
+                'Powerful asset' in get_asset_risks(asset) or
                 'Sensitive asset' in get_asset_risks(asset)) and \
                 asset.name not in asset_names:
                 asset_names.add(asset.name)
@@ -235,7 +250,7 @@ def draw_threats(title, assets, csl, args):
         asset_names = set()
         vuln_assets = set()
         for asset in assets:
-            if asset.get_type() in ['ELB', 'EC2', 'APIGW', 'CF'] and asset.name not in asset_names:
+            if asset.get_type() in ['ELB', 'EC2', 'ECS', 'APIGW', 'CF'] and asset.name not in asset_names:
                 asset_names.add(asset.name)
                 vuln_assets.add(asset)
                 csl.print(tagged_name(asset).replace('\n', ''))
@@ -256,23 +271,23 @@ def draw_threats(title, assets, csl, args):
         # internet >> public vulnerable asset
         if 'WAN reachable asset' in get_asset_risks(asset):
             links_lr.add(('INTERNET', asset))
+
+        # src assets -> asset
         for linked_asset in asset.src_linked_assets(assets):
             if linked_asset.public:
                 links_lr.add(('INTERNET', linked_asset))
-                # linked asset >> asset
                 links_lr.add((linked_asset, asset))
             else:
                 links_rl.add((linked_asset, 'LAN'))
-                # asset << linked asset
                 links_rl.add((asset, linked_asset))
+
+        # asset -> dst assets
         for linked_asset in asset.dst_linked_assets(assets):
             if asset.public:
                 links_lr.add(('INTERNET', asset))
-                # asset >> linked_asset
                 links_lr.add((asset, linked_asset))
             else:
                 links_rl.add((asset, 'LAN'))
-                # linked_asset << asset
                 links_rl.add((linked_asset, asset))
 
     # Remove assets without any links
@@ -289,22 +304,26 @@ def draw_threats(title, assets, csl, args):
         csl.print(f'Removing asset: {asset.name}')
         vuln_assets.remove(asset)
 
-    edge_attr = {
-        'minlen': '5'
-    }
+    edge_attr = {'minlen': '5'}
     with Diagram(title, direction='LR', edge_attr=edge_attr):
         internet = InternetGateway('INTERNET')
         lan = InternetGateway('LAN')
 
-        # Draw objects not in Cluster
         objects = []
         clusters = {}
         for asset in vuln_assets:
-            if asset.cluster_name():
-                if asset.cluster_name() not in clusters:
-                    clusters[asset.cluster_name()] = []
-                clusters[asset.cluster_name()].append(asset)
+            # group by cluster_name() if available
+            try:
+                cname = asset.cluster_name()
+            except Exception:
+                cname = None
+
+            if cname:
+                if cname not in clusters:
+                    clusters[cname] = []
+                clusters[cname].append(asset)
                 continue
+
             if not is_present(objects, asset):
                 objects.append(locals()[asset.get_type()](tagged_name(asset)))
             for linked_asset in asset.src_linked_assets(assets):
@@ -313,7 +332,7 @@ def draw_threats(title, assets, csl, args):
             for linked_asset in asset.dst_linked_assets(assets):
                 if not is_present(objects, linked_asset):
                     objects.append(locals()[linked_asset.get_type()](tagged_name(linked_asset)))
-        # Draw each Cluster
+
         for cluster_name, cluster_members in clusters.items():
             with Cluster(cluster_name):
                 for asset in cluster_members:
@@ -326,12 +345,13 @@ def draw_threats(title, assets, csl, args):
                         if not is_present(objects, linked_asset):
                             objects.append(locals()[linked_asset.get_type()](tagged_name(linked_asset)))
 
-        # Create link between objects
         objects.append(internet)
         objects.append(lan)
+
         for link in links_lr:
             if get_obj(objects, link[0]) and get_obj(objects, link[1]):
                 get_obj(objects, link[0]) >> get_obj(objects, link[1])
+
         for link in links_rl:
             if get_obj(objects, link[0]) and get_obj(objects, link[1]):
                 get_obj(objects, link[0]) << get_obj(objects, link[1])
