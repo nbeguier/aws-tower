@@ -5,6 +5,9 @@ Asset types CloudFront class
 Copyright 2020-2023 Leboncoin
 Licensed under the Apache License, Version 2.0
 Written by Nicolas BEGUIER (nicolas.beguier@adevinta.com)
+Copyright 2023-2024 Nicolas BEGUIER
+Licensed under the Apache License, Version 2.0
+Written by Nicolas BEGUIER (nicolas_beguier@hotmail.com)
 """
 
 # Standard library imports
@@ -57,7 +60,7 @@ class CloudFront(AssetType):
             self.authorization.add_auth_type(auth_type)
         self.location.region = 'global'
 
-    def report(self, report, brief=False):
+    def report(self, report, brief=False, with_fpkey=False):
         """
         Add an asset with only relevent informations
         """
@@ -71,7 +74,7 @@ class CloudFront(AssetType):
             if self.public:
                 asset_report['PubliclyAccessible'] = '[red]True[/red]'
             if self.security_issues:
-                self.update_audit_report(asset_report)
+                self.update_audit_report(asset_report, with_fpkey)
         if 'CloudFront' not in report[self.location.region]:
             report[self.location.region]['CloudFront'] = { self.name: asset_report }
             return report

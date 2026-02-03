@@ -5,9 +5,13 @@ Tools class
 Copyright 2020-2023 Leboncoin
 Licensed under the Apache License, Version 2.0
 Written by Nicolas BEGUIER (nicolas.beguier@adevinta.com)
+Copyright 2023-2024 Nicolas BEGUIER
+Licensed under the Apache License, Version 2.0
+Written by Nicolas BEGUIER (nicolas_beguier@hotmail.com)
 """
 
 # Standard library imports
+import hashlib
 import json
 import logging
 from pathlib import Path
@@ -22,7 +26,7 @@ from ruamel.yaml.error import YAMLError
 # from pdb import set_trace as st
 
 LOGGER = logging.getLogger('aws-tower')
-COLOG_TAG_REGEX = '\[\/?[a-z ]+\]'
+COLOG_TAG_REGEX = r'\[\/?[a-z ]+\]'
 
 def get_tag(tags, key):
     """ Returns a specific value in aws tags, from specified key
@@ -35,6 +39,7 @@ def get_tag(tags, key):
 def draw_sg(security_group, sg_raw):
     """
     Returns a full definition of security groups
+    Ex: {'80': ['0.0.0.0/0'], '9182': ['sg-e6337083'], '6379': ['sg-83b71de4', '34.1.1.1/32', '3.1.1.1/32'], '4520': ['0.0.0.0/0'], '3389': ['0.0.0.0/0'], '443': ['0.0.0.0/0']}
     """
     result = {}
     for _sg in sg_raw:
@@ -59,7 +64,9 @@ def draw_sg(security_group, sg_raw):
                         key_ports = f'{from_port}'
                         if from_port != to_port:
                             key_ports += f'-{to_port}'
-                        if key_ports  not in result:
+                        if key_ports == '0-65535':
+                            key_ports = 'all'
+                        if key_ports not in result:
                             result[key_ports] = []
                         ip_range = ip_perm['IpRanges']
                         userid_group_pairs = ip_perm['UserIdGroupPairs']
@@ -165,6 +172,19 @@ def get_account_in_arn(arn):
     if len(arn.split(':')) >= 5:
         return arn.split(':')[4]
     return '000000000000'
+
+def get_false_positive_key(message, asset_type, asset_name):
+    """
+    Returns the type, name and the 10 first characters of the message
+    """
+    # Convert the input string to bytes, as hashlib works with bytes
+    input_bytes = message.encode('utf-8')
+
+    # Compute the SHA-1 hash of the input bytes
+    sha1_hash = hashlib.sha1(input_bytes).hexdigest()
+
+    # Return the first 10 characters of the SHA-1 hash
+    return f'{asset_type.lower()}-{asset_name.lower().replace(" ", "-")}-{sha1_hash[:10]}'
 
 def get_lambda_name(apigw_arn):
     """
