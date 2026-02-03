@@ -5,15 +5,20 @@ Asset types class
 Copyright 2020-2023 Leboncoin
 Licensed under the Apache License, Version 2.0
 Written by Nicolas BEGUIER (nicolas.beguier@adevinta.com)
+Copyright 2023-2024 Nicolas Beguier
+Licensed under the Apache License, Version 2.0
+Written by Nicolas BEGUIER (nicolas_beguier@hotmail.com)
 """
 
 # Standard library imports
 from dataclasses import dataclass
+from pathlib import Path
 
-from .tools import color_severity
+from config import variables
+from .tools import color_severity, get_false_positive_key
 
 # Debug
-# from pdb import set_trace as st
+from pdb import set_trace as st
 
 @dataclass
 class Location:
@@ -43,14 +48,17 @@ class AssetType:
         """
         self.security_issues = patterns.extract_findings(self)
 
-    def update_audit_report(self, report):
+    def update_audit_report(self, report, with_fpkey):
         """
         Return an output of the audit
         """
         for issue in self.security_issues:
             if 'Audit' not in report:
                 report['Audit'] = []
-            report['Audit'].append(color_severity(issue["severity"], issue["title"], self.console))
+            message = issue['title']
+            if with_fpkey:
+                message = f'<false-positive-key={get_false_positive_key(message, self.get_type(), self.name)}> {message}'
+            report['Audit'].append(color_severity(issue['severity'], message, self.console))
 
     def display_brief_audit(self):
         """
@@ -82,6 +90,32 @@ class AssetType:
         This is a nutshell, check the ASsetGroup override function.
         """
         return True
+
+    def remove_false_positives(self):
+        """
+        Removes the findings from the false_positives_list.txt
+        """
+        fp_list_path = variables.FALSE_POSITIVES_LIST_PATH
+        fp_list = []
+        if fp_list_path.exists():
+            fp_list = fp_list_path.read_text(
+                encoding='ascii', errors='ignore').split('\n')
+        fp_list_wildcard = []
+        for _fp in fp_list:
+            if _fp.endswith('*'):
+                fp_list_wildcard.append(_fp.replace('*', ''))
+
+        security_issues = []
+
+        for security_issue in self.security_issues:
+            # Use wildcard filtering: remove any security_issue title that begins with an element from fp_list_wildcard
+            if any(get_false_positive_key(security_issue['title'], self.get_type(), self.name).startswith(prefix) for prefix in fp_list_wildcard):
+                continue
+            if get_false_positive_key(security_issue['title'], self.get_type(), self.name) in fp_list:
+                continue
+            security_issues.append(security_issue)
+
+        self.security_issues = security_issues
 
     def dst_linked_assets(self, _):
         """

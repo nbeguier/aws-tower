@@ -26,6 +26,9 @@ import libs.asset_type_rds as rds
 import libs.asset_type_route53 as r53
 import libs.asset_type_s3_group as s3
 import libs.asset_type_vpc as vpc
+
+# Debug
+# from pdb import set_trace as st
 import libs.asset_type_ecs as ecs 
 
 LOGGER = logging.getLogger('aws-tower')
@@ -233,6 +236,7 @@ def aws_scan(
             name_filter,
             public_only,
             cache,
+            boto_session,
             console)
 
     if 'IAM' in meta_types:

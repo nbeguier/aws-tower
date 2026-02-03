@@ -189,6 +189,7 @@ def draw_threats(title, assets, csl, args):
 
     def get_asset_color(asset):
         color = '🟢'
+        # Ignore low
         if asset.security_issues:
             color = '🟢'
         for finding in asset.security_issues:
@@ -204,7 +205,7 @@ def draw_threats(title, assets, csl, args):
         if 'WAN reachable asset' in get_asset_risks(asset):
             asset_name = '🌐 ' + asset_name
         if 'Application vulnerability' in get_asset_risks(asset):
-            if asset.get_type() != 'CloudFront':
+            if asset.get_type() != 'CloudFront': # CF are meant to be public
                 asset_name = '🤢 ' + asset_name
         if 'Powerful asset' in get_asset_risks(asset):
             asset_name = '💪 ' + asset_name
@@ -221,6 +222,7 @@ def draw_threats(title, assets, csl, args):
         return asset_name
 
     def get_obj(diag_objs, asset):
+        # TODO: check le type
         asset_name = asset
         if not isinstance(asset, str):
             asset_name = tagged_name(asset)
@@ -232,7 +234,7 @@ def draw_threats(title, assets, csl, args):
     def is_present(diag_objs, asset):
         return get_obj(diag_objs, asset)
 
-    # Generate "Vulnerable Assets"
+    # Generate "Vulnerable Assets", the base of the construction
     if args.limit:
         csl.print('Restrict to only interesting assets among vulnerable')
         asset_names = set()
@@ -271,23 +273,33 @@ def draw_threats(title, assets, csl, args):
         # internet >> public vulnerable asset
         if 'WAN reachable asset' in get_asset_risks(asset):
             links_lr.add(('INTERNET', asset))
+        # Fallback for ECS: ensure it appears in diagrams even without explicit links
+        if asset.get_type() == 'ECS':
+            if asset.public:
+                links_lr.add(('INTERNET', asset))
+            else:
+                links_rl.add((asset, 'LAN'))
 
         # src assets -> asset
         for linked_asset in asset.src_linked_assets(assets):
             if linked_asset.public:
                 links_lr.add(('INTERNET', linked_asset))
+                # linked asset >> asset
                 links_lr.add((linked_asset, asset))
             else:
                 links_rl.add((linked_asset, 'LAN'))
+                # asset << linked asset
                 links_rl.add((asset, linked_asset))
 
         # asset -> dst assets
         for linked_asset in asset.dst_linked_assets(assets):
             if asset.public:
                 links_lr.add(('INTERNET', asset))
+                # asset >> linked_asset
                 links_lr.add((asset, linked_asset))
             else:
                 links_rl.add((asset, 'LAN'))
+                # linked_asset << asset
                 links_rl.add((linked_asset, asset))
 
     # Remove assets without any links
@@ -309,6 +321,7 @@ def draw_threats(title, assets, csl, args):
         internet = InternetGateway('INTERNET')
         lan = InternetGateway('LAN')
 
+        # Draw objects not in Cluster
         objects = []
         clusters = {}
         for asset in vuln_assets:
@@ -332,6 +345,8 @@ def draw_threats(title, assets, csl, args):
             for linked_asset in asset.dst_linked_assets(assets):
                 if not is_present(objects, linked_asset):
                     objects.append(locals()[linked_asset.get_type()](tagged_name(linked_asset)))
+        
+        # Draw each Cluster
 
         for cluster_name, cluster_members in clusters.items():
             with Cluster(cluster_name):
@@ -345,6 +360,7 @@ def draw_threats(title, assets, csl, args):
                         if not is_present(objects, linked_asset):
                             objects.append(locals()[linked_asset.get_type()](tagged_name(linked_asset)))
 
+        # Create link between objects
         objects.append(internet)
         objects.append(lan)
 

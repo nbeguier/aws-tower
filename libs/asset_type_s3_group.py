@@ -5,6 +5,9 @@ Asset types S3 Group class
 Copyright 2020-2023 Leboncoin
 Licensed under the Apache License, Version 2.0
 Written by Nicolas BEGUIER (nicolas.beguier@adevinta.com)
+Copyright 2023-2024 Nicolas BEGUIER
+Licensed under the Apache License, Version 2.0
+Written by Nicolas BEGUIER (nicolas_beguier@hotmail.com)
 """
 
 # Third party library imports
@@ -40,7 +43,7 @@ class S3Group(AssetType):
         """
         return 'S3'
 
-    def report(self, report, brief=False):
+    def report(self, report, brief=False, with_fpkey=False):
         """
         Add an asset with only relevent informations
         """
@@ -159,6 +162,11 @@ def parse_raw_data(assets, authorizations, raw_data, name_filter, public_only, c
                 region,
                 acls,
                 public_only)
+            try:
+                if raw_data['s3_client'].get_bucket_policy_status(Bucket=s_three['Name'])['PolicyStatus']['IsPublic']:
+                    s3bucket.public = True
+            except:
+                pass
             cache.save_asset(f'S3_{s_three["Name"]}', s3bucket)
         if search_filter_in(s3bucket, name_filter):
             s3group.list.append(s3bucket)

@@ -5,15 +5,14 @@ AWS Tower Lambda Child Account
 Copyright 2020-2023 Leboncoin
 Licensed under the Apache License, Version 2.0
 Written by Nicolas BEGUIER (nicolas.beguier@adevinta.com)
-Copyright 2023-2024 Nicolas BEGUIER
-Licensed under the Apache License, Version 2.0
-Written by Nicolas BEGUIER (nicolas_beguier@hotmail.com)
 """
 
 # Standard library imports
 import json
 import logging
 import boto3
+import urllib3
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 # Own library and config files
 from config import variables
@@ -23,7 +22,7 @@ from config import variables
 
 # pylint: disable=logging-fstring-interpolation
 
-VERSION = '4.6.1'
+VERSION = '4.3.0'
 
 LOGGER = logging.getLogger('aws-tower')
 
@@ -31,15 +30,15 @@ def call_lambda(row):
     """
     Call child lambda to do async task via boto3
     """
-    LOGGER.warning(f'Calling lambda aws_tower_auditor with {row = }')
+    LOGGER.warning(f'Calling lambda aws_tower_child with {row = }')
     try:
         boto3.client('lambda').invoke(
-            FunctionName='aws_tower_auditor',
+            FunctionName='aws_tower_child',
             InvocationType='Event',
             Payload=json.dumps(row)
         )
     except Exception as err_msg:
-        LOGGER.error(f'Unable to call lambda aws_tower_auditor: {err_msg}')
+        LOGGER.error(f'Unable to call lambda aws_tower_child: {err_msg}')
         return False
     return True
 
@@ -57,15 +56,9 @@ def main(account):
             'meta_types': [meta_type]
         }
         regions = variables.LAMBDA_SCAN_REGION_LIST
-        is_global = meta_type in ['S3', 'CLOUDFRONT']
-        default_region = regions[0]
         if meta_type == 'EC2':
             regions = variables.AWS_ALL_REGION_LIST
-            payload['meta_types'] = ['EC2', 'IAM']
         for region in regions:
-            # If this is a global asset, ignore all regions except defaut
-            if is_global and region != default_region:
-                continue
             payload['region_name'] = region
             LOGGER.warning(f'Start scanning {aws_account_name=}, {env=}, {region=}, {meta_type=}...')
             call_lambda(payload)
@@ -73,6 +66,6 @@ def main(account):
 def handler(event, context):
     """
     Specific entrypoint for lambda
-    event = { "my-account-profile": "arn:aws:iam::xxxxxxxxxxxxx:role/AuditRole", "env": "pro|pre|dev" }
+    event = { "my-account-profile": "arn:aws:iam::xxxxxxxxxxxxx:role/readonly", "env": "pro|pre|dev" }
     """
     main(event)

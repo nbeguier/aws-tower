@@ -5,6 +5,9 @@ Asset types RDS class
 Copyright 2020-2023 Leboncoin
 Licensed under the Apache License, Version 2.0
 Written by Nicolas BEGUIER (nicolas.beguier@adevinta.com)
+Copyright 2023-2024 Nicolas BEGUIER
+Licensed under the Apache License, Version 2.0
+Written by Nicolas BEGUIER (nicolas_beguier@hotmail.com)
 """
 
 # Third party library imports
@@ -25,7 +28,7 @@ class RDS(AssetType):
         self.engine = engine
         self.url = url
 
-    def report(self, report, brief=False):
+    def report(self, report, brief=False, with_fpkey=False):
         """
         Add an asset with only relevent informations
         """
@@ -40,7 +43,7 @@ class RDS(AssetType):
             if self.url:
                 asset_report['URL'] = self.url
             if self.security_issues:
-                self.update_audit_report(asset_report)
+                self.update_audit_report(asset_report, with_fpkey)
         if 'RDS' not in report[self.location.region][self.location.vpc][self.location.subnet]:
             report[self.location.region][self.location.vpc][self.location.subnet]['RDS'] = \
                 { self.name: asset_report }
