@@ -4,6 +4,14 @@ CHANGELOG
 AWS-TOWER
 -----
 
+4.7.0
+-----
+
+2025/04/25
+
+### Updates
+  - Implementation of ECS monitoring
+
 4.6.1b
 -----
 
