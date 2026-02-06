@@ -9,7 +9,6 @@ AWS Services monitored:
 - API Gateway
 - CloudFront
 - EC2
-- ECS
 - EKS
 - ALB/ELB
 - IAM
