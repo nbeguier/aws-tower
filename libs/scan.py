@@ -29,6 +29,7 @@ import libs.asset_type_vpc as vpc
 
 # Debug
 # from pdb import set_trace as st
+import libs.asset_type_ecs as ecs 
 
 LOGGER = logging.getLogger('aws-tower')
 
@@ -42,6 +43,7 @@ def get_raw_data(boto_session, meta_types, cache, console):
         'ec2': True,
         'eks': True,
         'elb': True,
+        'ecs': True,          
         'iam': True,
         'lightsail': True,
         'mq': True,
@@ -85,6 +87,14 @@ def get_raw_data(boto_session, meta_types, cache, console):
 
     if 'ELB' in meta_types:
         raw_data, authorizations = elb.get_raw_data(
+            raw_data,
+            authorizations,
+            boto_session,
+            cache,
+            console)
+
+    if 'ECS' in meta_types:   
+        raw_data, authorizations = ecs.get_raw_data(
             raw_data,
             authorizations,
             boto_session,
@@ -216,6 +226,17 @@ def aws_scan(
             name_filter,
             public_only,
             cache,
+            console)
+
+    if 'ECS' in meta_types:  
+        assets, authorizations = ecs.parse_raw_data(
+            assets,
+            authorizations,
+            raw_data,
+            name_filter,
+            public_only,
+            cache,
+            boto_session,
             console)
 
     if 'IAM' in meta_types:

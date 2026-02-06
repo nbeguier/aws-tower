@@ -4,6 +4,15 @@ CHANGELOG
 AWS-TOWER
 -----
 
+4.7.0
+-----
+
+2026/02/03
+
+### New feature
+  - ECS monitoring implementation
+  - Add of `--region` in order to select manually if needed a specific region
+
 4.6.1b
 -----
 

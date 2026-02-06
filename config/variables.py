@@ -24,7 +24,7 @@ SUBNET_ALLOW_LIST_PATH = ROOT_PATH / 'config' / 'subnet_allow_list.txt'
 TRUSTED_ACCOUNTS_LIST_PATH = ROOT_PATH / 'config' / 'trusted_accounts_list.txt'
 FALSE_POSITIVES_LIST_PATH = ROOT_PATH / 'config' / 'false_positives_list.txt'
 
-META_TYPES = ['APIGW', 'CLOUDFRONT', 'EC2', 'EKS', 'ELB', 'IAM', 'LIGHTSAIL', 'MQ', 'RDS', 'S3', 'VPC']
+META_TYPES = ['APIGW', 'CLOUDFRONT', 'EC2', 'ECS', 'EKS', 'ELB', 'IAM', 'LIGHTSAIL', 'MQ', 'RDS', 'S3', 'VPC']
 
 IAM_ACTION_PASSLIST = ['autoscaling', 'ec2messages', 'ecs', 'elasticloadbalancing', 'logs', 'ssmmessages', 'support', 'xray']
 

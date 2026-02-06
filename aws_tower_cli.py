@@ -32,7 +32,8 @@ from config import variables
 # from pdb import set_trace as st
 
 CONSOLE = console.Console()
-VERSION = '4.6.1'
+VERSION = '4.7.0'
+
 
 def audit_handler(session, args, meta_types, cache):
     """
@@ -79,6 +80,7 @@ def audit_handler(session, args, meta_types, cache):
             security_config=security_config
         )
 
+
 def discover_handler(session, args, meta_types, cache):
     """
     Handle discover argument
@@ -109,6 +111,7 @@ def discover_handler(session, args, meta_types, cache):
             brief=args.brief,
             security_config=None
         )
+
 
 def draw_handler(session, args, meta_types, cache):
     """
@@ -142,6 +145,7 @@ def draw_handler(session, args, meta_types, cache):
         draw_vpc_peering(assets, args.vpc_peering_dot, args)
     else:
         draw_threats(f'AWS Tower: Threat map of {args.profile}', assets, CONSOLE, args)
+
 
 def iam_handler(session, args, cache, csl):
     """
@@ -184,6 +188,7 @@ def iam_handler(session, args, cache, csl):
             only_dangerous_actions=args.only_dangerous_actions,
             verbose=args.verbose)
 
+
 def main(verb, args):
     """
     Main function
@@ -191,12 +196,17 @@ def main(verb, args):
     csl = CONSOLE
     if args.no_color:
         csl = NoColor()
+
+    # Region override (works globally)
+    region_override = (getattr(args, 'region', None) or '').strip() or None
+
     try:
-        session = boto3.Session(profile_name=args.profile)
+        session = boto3.Session(profile_name=args.profile, region_name=region_override)
     except botocore.exceptions.ProfileNotFound:
         csl.print(f'[red]The profile [bold]{args.profile}[/bold] can\'t be found...')
         csl.print('[red]Take a look at the ~/.aws/config file.')
         sys.exit(1)
+
     meta_types = []
     if not hasattr(args, 'type') or args.type is None:
         meta_types = variables.META_TYPES
@@ -222,14 +232,17 @@ def main(verb, args):
         sys.exit(1)
     except:
         csl.print('[red]Can\'t get the caller identity...')
-    if session.region_name is None:
+
+    effective_region = region_override or session.region_name
+    if effective_region is None:
         csl.print('[red]No region defined, take a look at the ~/.aws/config file')
         sys.exit(1)
+
     csl.print(f'[white]Welcome [bold]{identity}[/bold] !')
     csl.print(
-        f'[white]Scan type: [bold]{verb}[/bold], '+
-        f'Profile: [bold]{args.profile}[/bold], '+
-        f'Region: [bold]{session.region_name}')
+        f'[white]Scan type: [bold]{verb}[/bold], ' +
+        f'Profile: [bold]{args.profile}[/bold], ' +
+        f'Region: [bold]{effective_region}[/bold]')
 
     if verb == 'audit':
         audit_handler(session, args, meta_types, cache)
@@ -242,6 +255,7 @@ def main(verb, args):
     else:
         sys.exit(1)
     sys.exit(0)
+
 
 if __name__ == '__main__':
     PARSER = ArgumentParser(
@@ -265,6 +279,13 @@ if __name__ == '__main__':
         '-p', '--list-profiles',
         action='store_true',
         help='List available profiles')
+
+    # Global region override
+    PARSER.add_argument(
+        '-r', '--region',
+        action='store',
+        default='',
+        help='AWS region override (default: region from profile)')
 
     # AUDIT Arguments
     AUDIT_PARSER = SUBPARSERS.add_parser(
@@ -435,6 +456,7 @@ if __name__ == '__main__':
         for profile in boto3.session.Session().available_profiles:
             print(profile)
         sys.exit(0)
+
     VERB = 'discover'
     if hasattr(ARGS, 'min_severity'):
         VERB = 'audit'
@@ -442,6 +464,7 @@ if __name__ == '__main__':
         VERB = 'iam'
     elif not hasattr(ARGS, 'filter'):
         VERB = 'draw'
+
     if ARGS.no_color:
         CONSOLE = None
     main(VERB, ARGS)

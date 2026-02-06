@@ -26,7 +26,7 @@ from ruamel.yaml.error import YAMLError
 # from pdb import set_trace as st
 
 LOGGER = logging.getLogger('aws-tower')
-COLOG_TAG_REGEX = '\[\/?[a-z ]+\]'
+COLOG_TAG_REGEX = r'\[\/?[a-z ]+\]'
 
 def get_tag(tags, key):
     """ Returns a specific value in aws tags, from specified key

@@ -8,6 +8,16 @@ package
 *.dot
 .DS_Store
 *.zip
+.venv
+
+
+#scripts
+read_findings_aws_tower.py 
+ip.py
+
+#scripts
+read_findings_aws_tower.py 
+ip.py
 
 # Config
 config/rules.yaml
