@@ -1,5 +1,5 @@
 ---
-version: 4.6.1c
+version: 4.7.0
 types:
   security_group:
     description: Check each rule on each security group and on each source
@@ -201,9 +201,224 @@ types:
           visibility: ['T1578.002', 'T1578.003', 'T1578.004']
           detection: ['T1578.002', 'T1578.003', 'T1578.004']
           protection: ['T1040', 'T1046']
+
   attributes:
     description: Check each rule on asset attributes
     findings:
+      - message:
+          text: 'ECS container [{name}] is running as root user'
+          args:
+            name:
+              type: variable
+              variable: service_name
+        severity: medium
+        rules:
+          - type: has_attribute_contains
+            description: Check if container runs as root
+            conditions:
+              - type: constant
+                name: attribute_value
+                value: root
+            data_sources:
+              - type: attribute
+                name: attribute_value
+                value: ContainerPrivilege
+
+      - message:
+          text: 'ECS container [{name}] is running in privileged mode with full host access'
+          args:
+            name:
+              type: variable
+              variable: service_name
+        severity: high
+        rules:
+          - type: has_attribute_equal
+            description: Check if container is privileged
+            conditions:
+              - type: constant
+                name: attribute_value
+                value: privileged+root
+            data_sources:
+              - type: attribute
+                name: attribute_value
+                value: ContainerPrivilege
+
+      - message:
+          text: 'ECS service [{name}] is directly exposed to the internet (public IP + open SG)'
+          args:
+            name:
+              type: variable
+              variable: service_name
+        severity: high
+        rules:
+          - type: has_attribute_equal
+            description: Check if task has a public IP assigned
+            conditions:
+              - type: constant
+                name: attribute_value
+                value: true
+            data_sources:
+              - type: attribute
+                name: attribute_value
+                value: PublicIpAssigned
+          - type: has_attribute_equal
+            description: Check if task security group allows public ingress
+            conditions:
+              - type: constant
+                name: attribute_value
+                value: true
+            data_sources:
+              - type: attribute
+                name: attribute_value
+                value: TaskPublicIngress
+
+      - message:
+          text: 'ECS container [{name}] has administrative AWS permissions: {actions}'
+          args:
+            name:
+              type: variable
+              variable: service_name
+            actions:
+              type: variable
+              variable: AdminActions
+        severity: critical
+        rules:
+          - type: has_attribute_exists
+            description: Check if container has admin actions
+            conditions:
+              - type: constant
+                name: attribute_exists
+                value: true
+            data_sources:
+              - type: attribute
+                name: attribute_exists
+                value: AdminActions
+
+      - message:
+          text: 'ECS container [{name}] uses host network mode - direct access to host network stack'
+          args:
+            name:
+              type: variable
+              variable: service_name
+        severity: high
+        rules:
+          - type: has_attribute_equal
+            description: Check if container uses host network mode
+            conditions:
+              - type: constant
+                name: attribute_value
+                value: host
+            data_sources:
+              - type: attribute
+                name: attribute_value
+                value: NetworkMode
+
+      - message:
+          text: 'ECS cluster has execute command enabled - shell access to containers is possible'
+          args:
+            name:
+              type: variable
+              variable: cluster_name
+        severity: medium
+        rules:
+          - type: has_attribute_equal
+            description: Check if ECS exec is enabled
+            conditions:
+              - type: constant
+                name: attribute_value
+                value: true
+            data_sources:
+              - type: attribute
+                name: attribute_value
+                value: ExecuteCommandEnabled
+
+      - message:
+          text: 'ECS service [{name}] exposes non-standard ports: {ports}'
+          args:
+            name:
+              type: variable
+              variable: service_name
+            ports:
+              type: variable
+              variable: ExposedPorts
+        severity: low
+        rules:
+          - type: has_non_standard_ports
+            description: Check if exposed ports are not 80/443
+            conditions:
+              - type: constant
+                name: is_non_standard
+                value: true
+            data_sources:
+              - type: attribute
+                name: ports_list
+                value: ExposedPorts
+
+      - message:
+          text: 'ECS container [{name}] is running an old image: {image} (pushed {age_days} days ago)'
+          args:
+            name:
+              type: variable
+              variable: service_name
+            image:
+              type: variable
+              variable: Image
+            age_days:
+              type: variable
+              variable: ImageAgeDays
+        severity: medium
+        rules:
+          - type: has_attribute_greater_than
+            description: Check if image is older than 90 days
+            conditions:
+              - type: constant
+                name: threshold
+                value: 90
+            data_sources:
+              - type: attribute
+                name: secrets_count
+                value: ImageAgeDays
+
+      - message:
+          text: 'ECS service [{name}] has multiple secrets/environment variables ({count}) - increased attack surface if compromised'
+          args:
+            name:
+              type: variable
+              variable: service_name
+            count:
+              type: variable
+              variable: SecretsCount
+        severity: info
+        rules:
+          - type: has_attribute_greater_than
+            description: Check if service has more than 5 secrets
+            conditions:
+              - type: constant
+                name: threshold
+                value: 5
+            data_sources:
+              - type: attribute
+                name: secrets_count
+                value: SecretsCount
+
+      - message:
+          text: 'ECS cluster has Container Insights disabled - no monitoring/logging for security events'
+          args:
+            name:
+              type: variable
+              variable: cluster_name
+        severity: low
+        rules:
+          - type: has_attribute_equal
+            description: Check if Container Insights is disabled
+            conditions:
+              - type: constant
+                name: attribute_value
+                value: disabled
+            data_sources:
+              - type: attribute
+                name: attribute_value
+                value: ContainerInsights
       - message:
           text: 'DnsRecord: {dns_record}'
           args:

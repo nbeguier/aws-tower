@@ -98,6 +98,10 @@ class Patterns:
             'data_sources': ['attribute_value'],
             'conditions': ['attribute_value']
         },
+        'has_attribute_contains': {
+            'data_sources': ['attribute_value'],
+            'conditions': ['attribute_value']
+        },
         'is_cidr': {
             'data_sources': ['source'],
             'conditions': ['is_cidr']
@@ -117,6 +121,26 @@ class Patterns:
         'engine_deprecated_version': {
             'data_sources': ['attribute_value'],
             'conditions': ['engine_name', 'versions']
+        },
+        'has_attribute_exists': {
+            'data_sources': ['attribute_exists'],
+            'conditions': ['attribute_exists']
+        },
+        'has_non_standard_ports': {
+            'data_sources': ['ports_list'],
+            'conditions': ['is_non_standard']
+        },
+        'has_latest_tag': {
+            'data_sources': ['image_tag'],
+            'conditions': ['is_latest']
+        },
+        'has_attribute_greater_than': {
+            'data_sources': ['secrets_count'],
+            'conditions': ['threshold']
+        },
+        'has_attribute_greater_or_equal': {
+            'data_sources': ['secrets_count'],
+            'conditions': ['threshold']
         }
     }
 
@@ -337,6 +361,59 @@ class Patterns:
         :rtype: bool
         """
         return data_sources['attribute_value'].lower() in conditions['attribute_value'].lower() or conditions['attribute_value'].lower() in data_sources['attribute_value'].lower()
+
+    def _check_rule_has_attribute_contains(self, data_sources, conditions):
+        """Alias for has_attribute_contain"""
+        return self._check_rule_has_attribute_contain(data_sources, conditions)
+
+    def _check_rule_has_attribute_exists(self, data_sources, conditions):
+        """Check if data_sources['attribute_exists'] is truthy."""
+        exists = data_sources.get('attribute_exists')
+        if isinstance(exists, (list, dict, str, tuple, set)):
+            exists = len(exists) > 0
+        return bool(exists) == bool(conditions.get('attribute_exists'))
+
+    def _check_rule_has_non_standard_ports(self, data_sources, conditions):
+        """Check if a list of ports contains any non-standard ports (not 80/443)."""
+        ports = data_sources.get('ports_list')
+        if ports is None:
+            return False
+        if isinstance(ports, (str, int)):
+            ports = [ports]
+        std = {80, 443, "80", "443"}
+        has_non_standard = False
+        for p in ports:
+            if p not in std:
+                has_non_standard = True
+                break
+        return bool(has_non_standard) == bool(conditions.get('is_non_standard'))
+
+    def _check_rule_has_latest_tag(self, data_sources, conditions):
+        """Check if image tag is :latest or missing."""
+        image = data_sources.get('image_tag') or ""
+        tag = ""
+        if ":" in image:
+            tag = image.rsplit(":", 1)[-1]
+        is_latest = (tag == "" or tag == "latest")
+        return bool(is_latest) == bool(conditions.get('is_latest'))
+
+    def _check_rule_has_attribute_greater_than(self, data_sources, conditions):
+        """Check if secrets_count is greater than a threshold."""
+        try:
+            count = int(data_sources.get('secrets_count') or 0)
+            threshold = int(conditions.get('threshold') or 0)
+        except (TypeError, ValueError):
+            return False
+        return count > threshold
+
+    def _check_rule_has_attribute_greater_or_equal(self, data_sources, conditions):
+        """Check if secrets_count is greater than or equal to a threshold."""
+        try:
+            count = int(data_sources.get('secrets_count') or 0)
+            threshold = int(conditions.get('threshold') or 0)
+        except (TypeError, ValueError):
+            return False
+        return count >= threshold
 
     def _check_rule_in(self, data_sources, conditions):
         """Check if conditions['data_element'] may be found in data_sources['data_list']
@@ -683,6 +760,18 @@ class Patterns:
         if len(self._patterns) == 0:
             return []
         report = []
+        kwargs = {
+            'asset': asset,
+            'name': getattr(asset, 'name', ''),
+        }
+        try:
+            kwargs.update(getattr(asset, '__dict__', {}) or {})
+        except Exception:
+            pass
+        try:
+            kwargs['cluster_name'] = asset.cluster_name()
+        except Exception:
+            pass
         if hasattr(asset, 'security_groups'):
             for sg_name, sg_rules in asset.security_groups.items():
                 for ports, sources in sg_rules.items():
@@ -693,14 +782,17 @@ class Patterns:
                             sg_name=sg_name,
                             ports=ports,
                             source=source,
-                            asset=asset
+                            **kwargs
                         )
                         if result is not False:
                             report += result
 
-        report_attributes = self._check_findings_by_type('attributes', asset=asset)
+        report_attributes = self._check_findings_by_type('attributes', **kwargs)
         if report_attributes is not False:
             report += report_attributes
+        report_type = self._check_findings_by_type(asset.get_type().lower(), **kwargs)
+        if report_type is not False:
+            report += report_type
         return report
 
     def _check_arguments_definitions(self, arguments, name):
