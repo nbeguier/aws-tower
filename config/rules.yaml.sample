@@ -1,5 +1,5 @@
 ---
-version: 4.7.0b
+version: 4.7.0c
 types:
   security_group:
     description: Check each rule on each security group and on each source
@@ -213,6 +213,16 @@ types:
               variable: service_name
         severity: low
         rules:
+          - type: has_attribute_equal
+            description: Check if the asset is ECS
+            conditions:
+              - type: constant
+                name: attribute_value
+                value: ECS
+            data_sources:
+              - type: attribute
+                name: attribute_value
+                value: aws_service
           - type: has_attribute_contains
             description: Check if container runs as root
             conditions:
@@ -233,6 +243,16 @@ types:
         severity: medium
         rules:
           - type: has_attribute_equal
+            description: Check if the asset is ECS
+            conditions:
+              - type: constant
+                name: attribute_value
+                value: ECS
+            data_sources:
+              - type: attribute
+                name: attribute_value
+                value: aws_service
+          - type: has_attribute_equal
             description: Check if container is privileged
             conditions:
               - type: constant
@@ -251,6 +271,16 @@ types:
               variable: service_name
         severity: high
         rules:
+          - type: has_attribute_equal
+            description: Check if the asset is ECS
+            conditions:
+              - type: constant
+                name: attribute_value
+                value: ECS
+            data_sources:
+              - type: attribute
+                name: attribute_value
+                value: aws_service
           - type: has_attribute_equal
             description: Check if task has a public IP assigned
             conditions:
@@ -283,6 +313,16 @@ types:
               variable: AdminActions
         severity: high
         rules:
+          - type: has_attribute_equal
+            description: Check if the asset is ECS
+            conditions:
+              - type: constant
+                name: attribute_value
+                value: ECS
+            data_sources:
+              - type: attribute
+                name: attribute_value
+                value: aws_service
           - type: has_attribute_exists
             description: Check if container has admin actions
             conditions:
@@ -303,6 +343,16 @@ types:
         severity: high
         rules:
           - type: has_attribute_equal
+            description: Check if the asset is ECS
+            conditions:
+              - type: constant
+                name: attribute_value
+                value: ECS
+            data_sources:
+              - type: attribute
+                name: attribute_value
+                value: aws_service
+          - type: has_attribute_equal
             description: Check if container uses host network mode
             conditions:
               - type: constant
@@ -321,6 +371,16 @@ types:
               variable: cluster_name
         severity: medium
         rules:
+          - type: has_attribute_equal
+            description: Check if the asset is ECS
+            conditions:
+              - type: constant
+                name: attribute_value
+                value: ECS
+            data_sources:
+              - type: attribute
+                name: attribute_value
+                value: aws_service
           - type: has_attribute_equal
             description: Check if ECS exec is enabled
             conditions:
