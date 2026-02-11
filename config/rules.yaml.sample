@@ -1,5 +1,5 @@
 ---
-version: 4.7.0
+version: 4.7.0b
 types:
   security_group:
     description: Check each rule on each security group and on each source
@@ -211,7 +211,7 @@ types:
             name:
               type: variable
               variable: service_name
-        severity: medium
+        severity: low
         rules:
           - type: has_attribute_contains
             description: Check if container runs as root
@@ -225,12 +225,12 @@ types:
                 value: ContainerPrivilege
 
       - message:
-          text: 'ECS container [{name}] is running in privileged mode with full host access'
+          text: 'ECS container [{name}] is running in privileged mode'
           args:
             name:
               type: variable
               variable: service_name
-        severity: high
+        severity: medium
         rules:
           - type: has_attribute_equal
             description: Check if container is privileged
@@ -281,7 +281,7 @@ types:
             actions:
               type: variable
               variable: AdminActions
-        severity: critical
+        severity: high
         rules:
           - type: has_attribute_exists
             description: Check if container has admin actions
@@ -366,7 +366,7 @@ types:
             age_days:
               type: variable
               variable: ImageAgeDays
-        severity: medium
+        severity: low
         rules:
           - type: has_attribute_greater_than
             description: Check if image is older than 90 days
