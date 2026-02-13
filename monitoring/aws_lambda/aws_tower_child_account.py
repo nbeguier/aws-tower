@@ -11,9 +11,10 @@ Written by Nicolas BEGUIER (nicolas_beguier@hotmail.com)
 """
 
 # Standard library imports
+import boto3
 import json
 import logging
-import boto3
+import time
 
 # Own library and config files
 from config import variables
@@ -23,7 +24,7 @@ from config import variables
 
 # pylint: disable=logging-fstring-interpolation
 
-VERSION = '4.6.1'
+VERSION = '4.7.0a'
 
 LOGGER = logging.getLogger('aws-tower')
 
@@ -67,6 +68,7 @@ def main(account):
             if is_global and region != default_region:
                 continue
             payload['region_name'] = region
+            time.sleep(10)
             LOGGER.warning(f'Start scanning {aws_account_name=}, {env=}, {region=}, {meta_type=}...')
             call_lambda(payload)
 

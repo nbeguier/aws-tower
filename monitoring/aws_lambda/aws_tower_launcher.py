@@ -11,10 +11,11 @@ Written by Nicolas BEGUIER (nicolas_beguier@hotmail.com)
 """
 # Standard library imports
 from configparser import ConfigParser
+import boto3
 import json
 import logging
 import sys
-import boto3
+import time
 
 # Third party library imports
 sys.path.append('package')
@@ -23,7 +24,7 @@ sys.path.append('package')
 
 LOGGER = logging.getLogger('aws-tower-launcher')
 
-VERSION = '4.6.1'
+VERSION = '4.7.0a'
 
 LOGGER = logging.getLogger('aws-tower')
 
@@ -74,6 +75,7 @@ def main():
             aws_account_name: config[profile]['role_arn'],
             'env': config[profile]['env']
         }
+        time.sleep(20)
         LOGGER.warning(payload)
         call_lambda(payload)
 
