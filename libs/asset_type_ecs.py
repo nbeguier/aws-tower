@@ -8,11 +8,13 @@ Displayed fields (discover):
 - PrivateIP (the target IP(s) currently registered in the target group(s) of the service)
 - ContainerPrivilege (one-line: "privileged" | "root" | "none" | "privileged+root")
     -> highlighted in red when != "none"
-- AdminActions (ONLY if non-empty): ["*"] or ["s3", "s3-object-lambda", ...]
+- AdminActions (ONLY if non-empty): ["*"] or ["service", ...]
     -> highlighted in red
 
 Notes:
-- "AdminActions" here means: either "*" (full admin) OR service-level admin (e.g. 's3:*' -> 's3').
+- "AdminActions" here means global-scope admin grants only:
+  - "*" on global scope
+  - "<service>:*" on global scope
 - We deliberately do NOT print ALL Actions to stay concise.
 - We keep `security_groups` as an empty dict to avoid breaking existing audit/draw flows
   (Patterns expects `.security_groups.items()`).
@@ -78,9 +80,23 @@ def _sg_has_public_ingress(sg_id: str, sg_raw: list[dict]) -> bool:
     return False
 
 
-def _extract_allow_actions_from_policy_doc(policy_doc: dict) -> set[str]:
+def _is_global_scope_resource(resource) -> bool:
     """
-    Extract all Allowed Actions from a policy document (managed or inline).
+    Returns True when a statement Resource is effectively global.
+    """
+    if resource is None:
+        # Missing Resource behaves like wildcard for many IAM actions.
+        return True
+    if isinstance(resource, str):
+        return resource == "*"
+    if isinstance(resource, list):
+        return any(r == "*" for r in resource if isinstance(r, str))
+    return False
+
+
+def _extract_global_allow_actions_from_policy_doc(policy_doc: dict) -> set[str]:
+    """
+    Extract Allowed Actions from global-scope Allow statements only.
     Best-effort: ignores Deny and conditions.
     """
     actions: set[str] = set()
@@ -92,6 +108,9 @@ def _extract_allow_actions_from_policy_doc(policy_doc: dict) -> set[str]:
         if not isinstance(st, dict):
             continue
         if st.get("Effect") != "Allow":
+            continue
+        # Treat NotResource as broad scope. Otherwise require Resource wildcard.
+        if "NotResource" not in st and not _is_global_scope_resource(st.get("Resource")):
             continue
         act = st.get("Action", [])
         if isinstance(act, str):
@@ -126,7 +145,7 @@ def _get_role_allowed_actions(iam_client, role_arn: str) -> set[str]:
     Fetch allowed actions for a role:
     - Attached managed policies (get policy default version doc)
     - Inline policies (get role policy doc)
-    Returns a set of allowed actions (best-effort).
+    Returns a set of globally scoped allowed actions (best-effort).
     """
     if not role_arn or role_arn == "none":
         return set()
@@ -147,7 +166,7 @@ def _get_role_allowed_actions(iam_client, role_arn: str) -> set[str]:
             try:
                 resp = iam_client.get_role_policy(RoleName=role_name, PolicyName=pol_name)
                 doc = resp.get("PolicyDocument") or {}
-                allowed |= _extract_allow_actions_from_policy_doc(doc)
+                allowed |= _extract_global_allow_actions_from_policy_doc(doc)
             except botocore.exceptions.ClientError:
                 continue
     except botocore.exceptions.ClientError:
@@ -171,7 +190,7 @@ def _get_role_allowed_actions(iam_client, role_arn: str) -> set[str]:
                     continue
                 ver = iam_client.get_policy_version(PolicyArn=pol_arn, VersionId=default_ver)
                 doc = (ver.get("PolicyVersion") or {}).get("Document") or {}
-                allowed |= _extract_allow_actions_from_policy_doc(doc)
+                allowed |= _extract_global_allow_actions_from_policy_doc(doc)
             except botocore.exceptions.ClientError:
                 continue
     except botocore.exceptions.ClientError:
